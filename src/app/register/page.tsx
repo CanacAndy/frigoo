@@ -1,53 +1,37 @@
 "use client";
+
 import { auth } from "@/lib/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { AuthForm } from "@/components/auth-form";
 
 export default function Register() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegister = async (email: string, password: string) => {
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/"); // Redirige vers la page d’accueil
+      router.push("/home");
     } catch (err: any) {
-      setError(err.message);
+      const errorMessage =
+        err.code === "auth/email-already-in-use"
+          ? "Cette adresse email est déjà utilisée"
+          : err.code === "auth/weak-password"
+          ? "Le mot de passe doit contenir au moins 6 caractères"
+          : "Une erreur s'est produite lors de l'inscription";
+
+      setError(errorMessage);
+      throw err;
     }
   };
 
   return (
-    <main className="p-4">
-      <h1 className="text-xl font-bold">Créer un compte</h1>
-      <form onSubmit={handleRegister} className="space-y-2 mt-4">
-        <input
-          type="email"
-          placeholder="Email"
-          className="border p-2 w-full"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Mot de passe"
-          className="border p-2 w-full"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        {error && <p className="text-red-500">{error}</p>}
-        <button
-          type="submit"
-          className="bg-green-500 text-white px-4 py-2 rounded"
-        >
-          S’inscrire
-        </button>
-      </form>
-    </main>
+    <div className="flex flex-1 items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+      <div className="w-full max-w-md">
+        <AuthForm type="register" onSubmit={handleRegister} error={error} />
+      </div>
+    </div>
   );
 }
