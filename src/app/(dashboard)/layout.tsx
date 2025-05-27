@@ -34,7 +34,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gradient-to-br from-primary/5 to-purple-500/5">
+    <div className="flex h-screen overflow-hidden bg-gradient-to-br">
       {/* Sidebar (fixed, non scrollable) */}
       <motion.aside
         initial={{ x: -300, opacity: 0 }}
@@ -67,8 +67,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             </Button>
             <Button
               variant="ghost"
-              className="w-full justify-start modern-button bg-transparent hover:bg-primary/10"
               onClick={() => router.push("/profile")}
+              className="w-full justify-start modern-button bg-transparent hover:bg-primary/10"
             >
               <Settings className="w-4 h-4 mr-2" /> Profile
             </Button>
