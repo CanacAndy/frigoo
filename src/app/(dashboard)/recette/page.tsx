@@ -89,7 +89,11 @@ export default function RecipesPage() {
                 <Button
                   variant="outline"
                   className="mt-4"
+<<<<<<< HEAD
                   onClick={() => (window.location.href = "/monfrigo")}
+=======
+                  onClick={() => window.location.href = '/monfrigo'}
+>>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
                 >
                   Ajouter des ingrédients
                 </Button>

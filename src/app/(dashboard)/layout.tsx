@@ -6,6 +6,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import useUser from "@/hooks/useUser";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import {
   Home,
   LogOut,
@@ -15,6 +16,9 @@ import {
   X,
   UtensilsCrossed,
 } from "lucide-react";
+=======
+import { Home, LogOut, ChefHat, Settings, Menu, X, UtensilsCrossed } from "lucide-react";
+>>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
 import { useState } from "react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

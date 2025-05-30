@@ -152,9 +152,13 @@ export default function MonFrigoPage() {
               <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
                 <AlertCircle className="w-8 h-8 text-gray-400" />
               </div>
+<<<<<<< HEAD
               <p className="text-gray-500 text-lg">
                 Aucun aliment pour le moment
               </p>
+=======
+              <p className="text-gray-500 text-lg">Aucun aliment pour le moment</p>
+>>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
               <p className="text-gray-400 text-sm">
                 Ajoutez des aliments pour commencer à gérer votre frigo
               </p>
@@ -189,6 +193,7 @@ export default function MonFrigoPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900">{item.name}</h3>
                     <div className="flex gap-2 mt-1">
+<<<<<<< HEAD
                       <Badge variant="outline">
                         Quantité : {item.quantity}
                       </Badge>
@@ -201,6 +206,18 @@ export default function MonFrigoPage() {
                           ? "Expiré"
                           : `Expire dans ${daysUntilExpiry} jours`}
                       </Badge>
+=======
+                      <Badge variant="outline">Quantité : {item.quantity}</Badge>
+                      <Badge
+                        variant={
+                          badgeColor as "default" | "destructive" | "secondary"
+                        }
+                      >
+                        {daysUntilExpiry <= 0
+                          ? "Expiré"
+                          : `Expire dans ${daysUntilExpiry} jours`}
+                      </Badge>
+>>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
                     </div>
                   </div>
                 </div>
