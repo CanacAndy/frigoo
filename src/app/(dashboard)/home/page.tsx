@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-<<<<<<< HEAD
 import {
   Refrigerator,
   ChefHat,
@@ -10,9 +9,6 @@ import {
   ArrowRight,
   UtensilsCrossed,
 } from "lucide-react";
-=======
-import { Refrigerator, ChefHat, User, ArrowRight, UtensilsCrossed } from "lucide-react";
->>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
 
 export default function HomeDashboard() {
   return (
@@ -21,12 +17,8 @@ export default function HomeDashboard() {
       <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-8 text-white">
         <h1 className="text-3xl font-bold mb-2">Bienvenue sur Frigoo 👋</h1>
         <p className="text-green-50">
-<<<<<<< HEAD
           Gérez votre frigo intelligemment et découvrez des recettes
           personnalisées
-=======
-          Gérez votre frigo intelligemment et découvrez des recettes personnalisées
->>>>>>> e54e1ef70b8a4181f3fac87a3a47e710c52153fe
         </p>
       </div>
 
