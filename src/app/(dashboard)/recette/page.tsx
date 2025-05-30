@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import useUser from "@/hooks/useUser";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, ChefHat, Clock, UtensilsCrossed } from "lucide-react";
 
 export default function RecipesPage() {
   const user = useUser();
@@ -12,7 +15,6 @@ export default function RecipesPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 🔍 Récupération des aliments
   useEffect(() => {
     if (!user) return;
 
@@ -31,69 +33,132 @@ export default function RecipesPage() {
     fetchIngredients();
   }, [user]);
 
-  // 🔄 Génération de recette
-  useEffect(() => {
-    const fetchRecipe = async () => {
-      if (ingredients.length === 0) return;
+  const handleGenerateRecipe = async () => {
+    if (ingredients.length === 0) {
+      setError("Ajoutez d'abord des ingrédients dans votre frigo !");
+      return;
+    }
 
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch("/api/recipes", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ items: ingredients }),
-        });
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/recipes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: ingredients }),
+      });
 
-        const text = await res.text();
-
-        if (!res.ok) {
-          let errorMessage = "Erreur lors de la génération.";
-          try {
-            const errorData = JSON.parse(text);
-            errorMessage = errorData.error || errorMessage;
-          } catch {
-            console.error("Réponse non JSON :", text);
-          }
-          throw new Error(errorMessage);
-        }
-
-        const data = JSON.parse(text);
-        setRecipe(data.recipe || "Aucune recette générée.");
-      } catch (err: any) {
-        console.error("Erreur API :", err);
-        setError(err.message || "Erreur inconnue.");
-      } finally {
-        setLoading(false);
+      if (!res.ok) {
+        throw new Error("Erreur lors de la génération de la recette");
       }
-    };
 
-    fetchRecipe();
-  }, [ingredients]);
+      const data = await res.json();
+      setRecipe(data.recipe);
+    } catch (err) {
+      console.error("Erreur API :", err);
+      setError("Une erreur est survenue lors de la génération de la recette.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  if (!user) return <p className="p-4">Veuillez vous connecter.</p>;
+  if (!user) return null;
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-4">Recette avec mon frigo 🧑‍🍳</h1>
-
-      <div className="mb-6">
-        <p className="font-medium">Ingrédients trouvés :</p>
-        <ul className="list-disc list-inside text-gray-700">
-          {ingredients.map((item, i) => (
-            <li key={i}>{item}</li>
-          ))}
-        </ul>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">Recettes Personnalisées 👨‍🍳</h1>
+        <p className="text-blue-50">
+          Découvrez des recettes uniques avec les ingrédients de votre frigo
+        </p>
       </div>
 
-      {loading && <p>🔄 Génération de la recette en cours…</p>}
-      {error && <p className="text-red-600 font-semibold">{error}</p>}
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-blue-500" />
+              Ingrédients disponibles
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {ingredients.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <UtensilsCrossed className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p>Aucun ingrédient dans votre frigo</p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => (window.location.href = "/monfrigo")}
+                >
+                  Ajouter des ingrédients
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {ingredients.map((item, index) => (
+                  <div
+                    key={index}
+                    className="p-2 bg-gray-50 rounded-lg text-gray-700 flex items-center gap-2"
+                  >
+                    <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                    {item}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {!loading && !error && recipe && (
-        <div className="whitespace-pre-wrap bg-white p-4 rounded shadow text-gray-800">
-          {recipe}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="w-5 h-5 text-green-500" />
+              Générer une recette
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button
+              onClick={handleGenerateRecipe}
+              disabled={loading || ingredients.length === 0}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+            >
+              {loading ? (
+                <>
+                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  Génération en cours...
+                </>
+              ) : (
+                "Générer une recette"
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {error && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-6">
+            <p className="text-red-600">{error}</p>
+          </CardContent>
+        </Card>
       )}
-    </main>
+
+      {recipe && !error && (
+        <Card className="border-green-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ChefHat className="w-5 h-5 text-green-500" />
+              Votre recette personnalisée
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="prose prose-green max-w-none">
+              <div className="whitespace-pre-wrap">{recipe}</div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
