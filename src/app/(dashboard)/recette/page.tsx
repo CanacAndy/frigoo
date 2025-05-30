@@ -67,7 +67,12 @@ export default function RecipesPage() {
         const savedSnapshot = await getDocs(savedRef);
         const saved = savedSnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          title: doc.data().title || "Sans titre",
+          description: doc.data().description || "",
+          mealType: doc.data().mealType || "dîner",
+          ingredients: doc.data().ingredients || [],
+          steps: doc.data().steps || [],
+          saved: doc.data().saved !== false,
         })) as Recipe[];
         setSavedRecipes(saved);
       } catch (err) {
@@ -104,7 +109,12 @@ export default function RecipesPage() {
       }
 
       const data = await res.json();
-      setRecipe(data);
+      setRecipe({
+        ...data,
+        mealType: data.mealType || mealType,
+        ingredients: data.ingredients || [],
+        steps: data.steps || [],
+      });
       setShowMealTypeSelector(false);
       setActiveTab("current");
     } catch (err) {
@@ -119,7 +129,13 @@ export default function RecipesPage() {
     if (!user || !recipe) return;
 
     try {
-      const recipeToSave = { ...recipe, saved: true };
+      const recipeToSave = {
+        ...recipe,
+        saved: true,
+        title: recipe.title || "Nouvelle recette",
+        description: recipe.description || "",
+        mealType: recipe.mealType || "dîner",
+      };
       const docRef = await addDoc(
         collection(db, `users/${user.uid}/savedRecipes`),
         recipeToSave
@@ -150,13 +166,19 @@ export default function RecipesPage() {
   };
 
   const loadSavedRecipe = (savedRecipe: Recipe) => {
-    setRecipe(savedRecipe);
+    setRecipe({
+      ...savedRecipe,
+      title: savedRecipe.title || "Sans titre",
+      description: savedRecipe.description || "",
+      mealType: savedRecipe.mealType || "dîner",
+    });
     setActiveTab("current");
   };
 
-  const filteredSavedRecipes = savedRecipes.filter((recipe) =>
-    recipe.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSavedRecipes = savedRecipes.filter((recipe) => {
+    const title = recipe?.title?.toLowerCase() || "";
+    return title.includes(searchTerm.toLowerCase());
+  });
 
   if (!user) return null;
 
@@ -169,7 +191,11 @@ export default function RecipesPage() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+      <Tabs
+        value={activeTab}
+        onValueChange={setActiveTab}
+        className="space-y-6"
+      >
         <TabsList className="grid grid-cols-3 w-full">
           <TabsTrigger value="generate">
             <ChefHat className="mr-2 h-4 w-4" />
@@ -275,7 +301,7 @@ export default function RecipesPage() {
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ChefHat className="w-5 h-5 text-green-500" />
-                    {recipe.title}
+                    {recipe.title || "Nouvelle recette"}
                   </CardTitle>
                   <p className="text-sm text-gray-500 mt-1">
                     Pour: {recipe.mealType}
@@ -306,7 +332,9 @@ export default function RecipesPage() {
                   <ul className="space-y-2">
                     {recipe.ingredients.map((ingredient, index) => (
                       <li key={index} className="flex gap-2">
-                        <span className="font-medium">{ingredient.quantity}:</span>
+                        <span className="font-medium">
+                          {ingredient.quantity}:
+                        </span>
                         <span>{ingredient.name}</span>
                       </li>
                     ))}
@@ -382,7 +410,7 @@ export default function RecipesPage() {
                       <CardHeader className="flex flex-row justify-between items-center p-4">
                         <div>
                           <CardTitle className="text-lg">
-                            {savedRecipe.title}
+                            {savedRecipe.title || "Sans titre"}
                           </CardTitle>
                           <p className="text-sm text-gray-500">
                             {savedRecipe.mealType}

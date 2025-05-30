@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       {
         role: "system",
         content:
-          "Tu es un assistant culinaire. Réponds toujours en JSON avec la structure suivante : { \"title\": string, \"description\": string, \"mealType\": string, \"ingredients\": [ { \"name\": string, \"quantity\": string } ], \"steps\": [string] }. Donne des quantités et une recette claire.",
+          "Tu es un assistant culinaire expert. Tu dois toujours répondre en français et formater ta réponse en JSON avec la structure suivante : { \"title\": string, \"description\": string, \"mealType\": string, \"ingredients\": [ { \"name\": string, \"quantity\": string } ], \"steps\": [string] }. Utilise exclusivement le français pour tous les éléments de la recette, y compris les noms d'ingrédients et les étapes. Donne des quantités précises et une recette détaillée.",
       },
       {
         role: "user",

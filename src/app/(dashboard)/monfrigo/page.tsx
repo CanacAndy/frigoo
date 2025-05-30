@@ -42,6 +42,7 @@ interface FridgeItem {
 export default function MonFrigoPage() {
   const user = useUser();
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
 
   const [items, setItems] = useState<FridgeItem[]>([]);
   const [name, setName] = useState("");
@@ -49,7 +50,17 @@ export default function MonFrigoPage() {
   const [expiresAt, setExpiresAt] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [filterExpiry, setFilterExpiry] = useState<"all" | "expired" | "soon" | "ok">("all");
+  const [filterExpiry, setFilterExpiry] = useState<
+    "all" | "expired" | "soon" | "ok"
+  >("all");
+
+  useEffect(() => {
+    if (user === null) {
+      router.push("/login");
+    } else if (user !== undefined) {
+      setIsLoading(false);
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (!user) return;
@@ -65,6 +76,20 @@ export default function MonFrigoPage() {
 
     return () => unsubscribe();
   }, [user]);
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
+
+  // ... (le reste de votre code reste exactement le même)
+
+  if (!user) {
+    return null; // Retourne null pendant la redirection
+  }
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -105,7 +130,9 @@ export default function MonFrigoPage() {
 
   const filterItemsByExpiry = (items: FridgeItem[]) => {
     if (filterExpiry === "all") return items;
-    return items.filter((item) => getExpiryStatus(item.expiresAt) === filterExpiry);
+    return items.filter(
+      (item) => getExpiryStatus(item.expiresAt) === filterExpiry
+    );
   };
 
   const sortedAndFilteredItems = filterItemsByExpiry(
@@ -115,11 +142,6 @@ export default function MonFrigoPage() {
       return dateA.getTime() - dateB.getTime();
     })
   );
-
-  if (!user) {
-    router.push("/login");
-    return null;
-  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
