@@ -12,6 +12,18 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  User,
+  Shield,
+  Settings,
+  AlertCircle,
+  Mail,
+  UserCircle,
+  MessageSquare,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const user = useUser();
@@ -26,6 +38,8 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -53,49 +67,55 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
+    setError("");
+    setSuccessMessage("");
 
-    const ref = doc(db, `users/${user.uid}`);
-    await setDoc(ref, { profile }, { merge: true });
-
-    alert("✅ Profil mis à jour !");
+    try {
+      const ref = doc(db, `users/${user.uid}`);
+      await setDoc(ref, { profile }, { merge: true });
+      setSuccessMessage("Profil mis à jour avec succès !");
+    } catch (err) {
+      setError("Une erreur est survenue lors de la mise à jour du profil.");
+    }
   };
 
   const handlePasswordChange = async () => {
     if (!user) return;
+    setError("");
+    setSuccessMessage("");
 
     if (newPassword !== confirmPassword) {
-      alert("❌ Les mots de passe ne correspondent pas.");
+      setError("Les mots de passe ne correspondent pas.");
       return;
     }
 
     if (newPassword.length < 6) {
-      alert("❌ Le mot de passe doit faire au moins 6 caractères.");
+      setError("Le mot de passe doit faire au moins 6 caractères.");
       return;
     }
 
     if (!currentPassword) {
-      alert("❌ Veuillez saisir votre mot de passe actuel pour confirmer.");
+      setError("Veuillez saisir votre mot de passe actuel pour confirmer.");
       return;
     }
 
     try {
-      // Ré-authentification avec l'email et le mot de passe actuel
       const credential = EmailAuthProvider.credential(
         user.email!,
         currentPassword
       );
       await reauthenticateWithCredential(user, credential);
-
-      // Mise à jour du mot de passe
       await updatePassword(user, newPassword);
 
-      alert("✅ Mot de passe mis à jour !");
+      setSuccessMessage("Mot de passe mis à jour avec succès !");
       setNewPassword("");
       setConfirmPassword("");
       setCurrentPassword("");
     } catch (err: any) {
       console.error(err);
-      alert("❌ Erreur lors du changement de mot de passe : " + err.message);
+      setError(
+        "Erreur lors du changement de mot de passe. Vérifiez votre mot de passe actuel."
+      );
     }
   };
 
@@ -110,117 +130,191 @@ export default function ProfilePage() {
   if (!user) return <p>Veuillez vous connecter.</p>;
 
   return (
-    <main className="flex-1 p-6">
-      <h1 className="text-2xl font-bold mb-6">Mon Profil 👤</h1>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Profil utilisateur */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Informations de profil</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium">Email</label>
-              <Input
-                type="text"
-                value={user.email || ""}
-                readOnly
-                className="bg-gray-100"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">Nom complet</label>
-              <Input
-                type="text"
-                value={profile.fullName}
-                onChange={(e) =>
-                  setProfile({ ...profile, fullName: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">Pseudo</label>
-              <Input
-                type="text"
-                value={profile.username}
-                onChange={(e) =>
-                  setProfile({ ...profile, username: e.target.value })
-                }
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">Bio</label>
-              <textarea
-                value={profile.bio}
-                onChange={(e) =>
-                  setProfile({ ...profile, bio: e.target.value })
-                }
-                className="w-full border p-2 rounded text-sm"
-                rows={3}
-              />
-            </div>
-
-            <Button
-              onClick={handleSaveProfile}
-              className="bg-blue-600 text-white"
-            >
-              Sauvegarder le profil
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Changement de mot de passe */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Changer le mot de passe</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium">
-                Mot de passe actuel
-              </label>
-              <Input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">
-                Nouveau mot de passe
-              </label>
-              <Input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium">
-                Confirmer le mot de passe
-              </label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
-            </div>
-
-            <Button
-              onClick={handlePasswordChange}
-              className="bg-green-600 text-white"
-            >
-              Modifier le mot de passe
-            </Button>
-          </CardContent>
-        </Card>
+    <div className="max-w-4xl mx-auto space-y-8">
+      <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-8 text-white">
+        <h1 className="text-3xl font-bold mb-2">Mon Profil</h1>
+        <p className="text-purple-50">
+          Gérez vos informations personnelles et vos préférences
+        </p>
       </div>
-    </main>
+
+      <Tabs defaultValue="profile" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="profile">
+            <User className="w-4 h-4 mr-2" />
+            Profil
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <Shield className="w-4 h-4 mr-2" />
+            Sécurité
+          </TabsTrigger>
+          <TabsTrigger value="preferences">
+            <Settings className="w-4 h-4 mr-2" />
+            Préférences
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="profile">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <User className="w-5 h-5 text-purple-500" />
+                Informations personnelles
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Mail className="w-4 h-4 text-gray-500" />
+                    Email
+                  </Label>
+                  <Input
+                    type="text"
+                    value={user.email || ""}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <UserCircle className="w-4 h-4 text-gray-500" />
+                    Nom complet
+                  </Label>
+                  <Input
+                    type="text"
+                    value={profile.fullName}
+                    onChange={(e) =>
+                      setProfile({ ...profile, fullName: e.target.value })
+                    }
+                    placeholder="Votre nom complet"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-gray-500" />
+                    Pseudo
+                  </Label>
+                  <Input
+                    type="text"
+                    value={profile.username}
+                    onChange={(e) =>
+                      setProfile({ ...profile, username: e.target.value })
+                    }
+                    placeholder="Votre pseudo"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4 text-gray-500" />
+                    Bio
+                  </Label>
+                  <textarea
+                    value={profile.bio}
+                    onChange={(e) =>
+                      setProfile({ ...profile, bio: e.target.value })
+                    }
+                    placeholder="Parlez-nous un peu de vous..."
+                    className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveProfile}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+              >
+                Sauvegarder les modifications
+              </Button>
+
+              {successMessage && (
+                <Alert className="bg-green-50 border-green-200">
+                  <AlertDescription className="text-green-600">
+                    {successMessage}
+                  </AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="security">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-purple-500" />
+                Sécurité du compte
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Mot de passe actuel</Label>
+                  <Input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Votre mot de passe actuel"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nouveau mot de passe</Label>
+                  <Input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Votre nouveau mot de passe"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Confirmer le nouveau mot de passe</Label>
+                  <Input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirmez votre nouveau mot de passe"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={handlePasswordChange}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+              >
+                Modifier le mot de passe
+              </Button>
+
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="preferences">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-purple-500" />
+                Préférences
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-gray-500 text-center py-8">
+                Les préférences seront bientôt disponibles...
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
