@@ -14,16 +14,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
 import {
   User,
   Shield,
   Settings,
-  AlertCircle,
   Mail,
   UserCircle,
   MessageSquare,
+  Bell,
+  Moon,
+  Sun,
+  Globe,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function ProfilePage() {
   const user = useUser();
@@ -32,34 +42,41 @@ export default function ProfilePage() {
     fullName: "",
     username: "",
     bio: "",
+    language: "fr",
+    theme: "light",
+    notifications: true,
   });
 
   const [loading, setLoading] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
 
-      const ref = doc(db, `users/${user.uid}`);
-      const snap = await getDoc(ref);
+      try {
+        const ref = doc(db, `users/${user.uid}`);
+        const snap = await getDoc(ref);
 
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.profile) {
+        if (snap.exists()) {
+          const data = snap.data();
           setProfile({
-            fullName: data.profile.fullName || "",
-            username: data.profile.username || "",
-            bio: data.profile.bio || "",
+            fullName: data.profile?.fullName || "",
+            username: data.profile?.username || "",
+            bio: data.profile?.bio || "",
+            language: data.profile?.language || "fr",
+            theme: data.profile?.theme || "light",
+            notifications: data.profile?.notifications ?? true,
           });
         }
-      }
 
-      setLoading(false);
+        setLoading(false);
+      } catch (error) {
+        toast.error("Erreur lors du chargement du profil");
+        setLoading(false);
+      }
     };
 
     fetchProfile();
@@ -67,35 +84,26 @@ export default function ProfilePage() {
 
   const handleSaveProfile = async () => {
     if (!user) return;
-    setError("");
-    setSuccessMessage("");
 
     try {
       const ref = doc(db, `users/${user.uid}`);
       await setDoc(ref, { profile }, { merge: true });
-      setSuccessMessage("Profil mis à jour avec succès !");
-    } catch (err) {
-      setError("Une erreur est survenue lors de la mise à jour du profil.");
+      toast.success("Profil mis à jour avec succès");
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour du profil");
     }
   };
 
   const handlePasswordChange = async () => {
     if (!user) return;
-    setError("");
-    setSuccessMessage("");
 
     if (newPassword !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      toast.error("Les mots de passe ne correspondent pas");
       return;
     }
 
     if (newPassword.length < 6) {
-      setError("Le mot de passe doit faire au moins 6 caractères.");
-      return;
-    }
-
-    if (!currentPassword) {
-      setError("Veuillez saisir votre mot de passe actuel pour confirmer.");
+      toast.error("Le mot de passe doit faire au moins 6 caractères");
       return;
     }
 
@@ -107,49 +115,46 @@ export default function ProfilePage() {
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
 
-      setSuccessMessage("Mot de passe mis à jour avec succès !");
+      toast.success("Mot de passe mis à jour avec succès");
       setNewPassword("");
       setConfirmPassword("");
       setCurrentPassword("");
-    } catch (err: any) {
-      console.error(err);
-      setError(
-        "Erreur lors du changement de mot de passe. Vérifiez votre mot de passe actuel."
-      );
+    } catch (error) {
+      toast.error("Erreur lors du changement de mot de passe");
     }
   };
 
   if (loading || user === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
-        <p className="text-lg animate-pulse text-green-600">Chargement...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
 
-  if (!user) return <p>Veuillez vous connecter.</p>;
+  if (!user) return null;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">Mon Profil</h1>
+    <div className="space-y-8">
+      <div className="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-6 md:p-8 text-white">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Mon Profil</h1>
         <p className="text-purple-50">
           Gérez vos informations personnelles et vos préférences
         </p>
       </div>
 
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">
-            <User className="w-4 h-4 mr-2" />
+        <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
+          <TabsTrigger value="profile" className="flex items-center gap-2">
+            <User className="h-4 w-4" />
             Profil
           </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="w-4 h-4 mr-2" />
+          <TabsTrigger value="security" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
             Sécurité
           </TabsTrigger>
-          <TabsTrigger value="preferences">
-            <Settings className="w-4 h-4 mr-2" />
+          <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <Settings className="h-4 w-4" />
             Préférences
           </TabsTrigger>
         </TabsList>
@@ -158,15 +163,15 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5 text-purple-500" />
+                <User className="h-5 w-5 text-purple-500" />
                 Informations personnelles
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="space-y-4">
+              <div className="grid gap-6">
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <Mail className="w-4 h-4 text-gray-500" />
+                    <Mail className="h-4 w-4 text-gray-500" />
                     Email
                   </Label>
                   <Input
@@ -179,7 +184,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <UserCircle className="w-4 h-4 text-gray-500" />
+                    <UserCircle className="h-4 w-4 text-gray-500" />
                     Nom complet
                   </Label>
                   <Input
@@ -194,7 +199,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-gray-500" />
+                    <User className="h-4 w-4 text-gray-500" />
                     Pseudo
                   </Label>
                   <Input
@@ -209,7 +214,7 @@ export default function ProfilePage() {
 
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-gray-500" />
+                    <MessageSquare className="h-4 w-4 text-gray-500" />
                     Bio
                   </Label>
                   <textarea
@@ -218,7 +223,7 @@ export default function ProfilePage() {
                       setProfile({ ...profile, bio: e.target.value })
                     }
                     placeholder="Parlez-nous un peu de vous..."
-                    className="w-full min-h-[100px] rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full min-h-[100px] rounded-lg border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -229,14 +234,6 @@ export default function ProfilePage() {
               >
                 Sauvegarder les modifications
               </Button>
-
-              {successMessage && (
-                <Alert className="bg-green-50 border-green-200">
-                  <AlertDescription className="text-green-600">
-                    {successMessage}
-                  </AlertDescription>
-                </Alert>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -245,7 +242,7 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5 text-purple-500" />
+                <Shield className="h-5 w-5 text-purple-500" />
                 Sécurité du compte
               </CardTitle>
             </CardHeader>
@@ -288,13 +285,6 @@ export default function ProfilePage() {
               >
                 Modifier le mot de passe
               </Button>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -303,14 +293,90 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Settings className="w-5 h-5 text-purple-500" />
+                <Settings className="h-5 w-5 text-purple-500" />
                 Préférences
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-gray-500 text-center py-8">
-                Les préférences seront bientôt disponibles...
-              </p>
+            <CardContent className="space-y-6">
+              <div className="grid gap-6">
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-gray-500" />
+                    Langue
+                  </Label>
+                  <Select
+                    value={profile.language}
+                    onValueChange={(value) =>
+                      setProfile({ ...profile, language: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez une langue" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="fr">Français</SelectItem>
+                      <SelectItem value="en">English</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    {profile.theme === "light" ? (
+                      <Sun className="h-4 w-4 text-gray-500" />
+                    ) : (
+                      <Moon className="h-4 w-4 text-gray-500" />
+                    )}
+                    Thème
+                  </Label>
+                  <Select
+                    value={profile.theme}
+                    onValueChange={(value) =>
+                      setProfile({ ...profile, theme: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez un thème" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="light">Clair</SelectItem>
+                      <SelectItem value="dark">Sombre</SelectItem>
+                      <SelectItem value="system">Système</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-gray-500" />
+                    Notifications
+                  </Label>
+                  <Select
+                    value={profile.notifications ? "enabled" : "disabled"}
+                    onValueChange={(value) =>
+                      setProfile({
+                        ...profile,
+                        notifications: value === "enabled",
+                      })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Statut des notifications" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="enabled">Activées</SelectItem>
+                      <SelectItem value="disabled">Désactivées</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveProfile}
+                className="w-full bg-gradient-to-r from-purple-600 to-pink-600"
+              >
+                Sauvegarder les préférences
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

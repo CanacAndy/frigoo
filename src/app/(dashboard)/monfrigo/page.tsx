@@ -31,6 +31,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Edit,
+  Filter,
 } from "lucide-react";
 import {
   Select,
@@ -39,6 +40,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface FridgeItem {
   id: string;
@@ -92,58 +94,60 @@ function EditItemForm({
         <CardTitle>Modifier l'aliment</CardTitle>
       </CardHeader>
       <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="grid grid-cols-1 sm:grid-cols-5 gap-4"
-        >
-          <Input
-            placeholder="Nom de l'aliment"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          <Input
-            placeholder="Quantité"
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            required
-          />
-          <Select
-            value={type}
-            onValueChange={(value) => setType(value)}
-            required
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Type d'aliment" />
-            </SelectTrigger>
-            <SelectContent>
-              {foodTypes.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Input
-            type="date"
-            value={expiresAt}
-            onChange={(e) => setExpiresAt(e.target.value)}
-            required
-          />
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              className="flex-1 bg-green-600 hover:bg-green-700"
-            >
-              Enregistrer
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <Input
+                placeholder="Nom de l'aliment"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Input
+                placeholder="Quantité"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type d'aliment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {foodTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Annuler
             </Button>
             <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              onClick={onCancel}
+              type="submit"
+              className="bg-gradient-to-r from-green-600 to-emerald-600"
             >
-              Annuler
+              Enregistrer
             </Button>
           </div>
         </form>
@@ -222,7 +226,10 @@ function ItemCard({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDelete(item.id)}
+                onClick={() => {
+                  onDelete(item.id);
+                  toast.success("Aliment supprimé");
+                }}
                 className="text-gray-400 hover:text-red-600 hover:bg-red-50"
               >
                 <Trash2 className="h-5 w-5" />
@@ -242,116 +249,10 @@ function ItemCard({
   );
 }
 
-function ItemList({
-  items,
-  onDelete,
-  onUpdate,
-}: {
-  items: FridgeItem[];
-  onDelete: (id: string) => void;
-  onUpdate: (id: string, updatedItem: Partial<FridgeItem>) => void;
-}) {
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="space-y-4">
-          {items.map((item) => {
-            const expiryDate = new Date(item.expiresAt);
-            const today = new Date();
-            const daysUntilExpiry = Math.ceil(
-              (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-            );
-
-            let badgeColor = "default";
-            if (daysUntilExpiry <= 0) {
-              badgeColor = "destructive";
-            } else if (daysUntilExpiry <= 3) {
-              badgeColor = "secondary";
-            }
-
-            return (
-              <div key={item.id}>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white border hover:border-green-200 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="h-10 w-10">
-                      <AvatarFallback className="bg-green-100 text-green-600">
-                        {item.name?.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {item.name}
-                      </h3>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        <Badge
-                          variant="outline"
-                          className="bg-blue-50 text-blue-600"
-                        >
-                          {item.type}
-                        </Badge>
-                        <Badge variant="outline">
-                          Quantité : {item.quantity}
-                        </Badge>
-                        <Badge
-                          variant={
-                            badgeColor as
-                              | "default"
-                              | "destructive"
-                              | "secondary"
-                          }
-                        >
-                          {daysUntilExpiry <= 0
-                            ? "Expiré"
-                            : `Expire dans ${daysUntilExpiry} jours`}
-                        </Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setEditingId(item.id)}
-                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                    >
-                      <Edit className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => onDelete(item.id)}
-                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-                {editingId === item.id && (
-                  <EditItemForm
-                    item={item}
-                    onSave={(updatedData) => {
-                      onUpdate(item.id, updatedData);
-                      setEditingId(null);
-                    }}
-                    onCancel={() => setEditingId(null)}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function MonFrigoPage() {
   const user = useUser();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
-
   const [items, setItems] = useState<FridgeItem[]>([]);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
@@ -392,31 +293,46 @@ export default function MonFrigoPage() {
     e.preventDefault();
     if (!user || !name || !quantity || !type || !expiresAt) return;
 
-    await addDoc(collection(db, `users/${user.uid}/fridgeItems`), {
-      name,
-      quantity,
-      type,
-      expiresAt,
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, `users/${user.uid}/fridgeItems`), {
+        name,
+        quantity,
+        type,
+        expiresAt,
+        createdAt: serverTimestamp(),
+      });
 
-    setName("");
-    setQuantity("");
-    setType("");
-    setExpiresAt("");
+      setName("");
+      setQuantity("");
+      setType("");
+      setExpiresAt("");
+      toast.success("Aliment ajouté avec succès");
+    } catch (error) {
+      toast.error("Erreur lors de l'ajout de l'aliment");
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!user) return;
-    await deleteDoc(doc(db, `users/${user.uid}/fridgeItems/${id}`));
+    try {
+      await deleteDoc(doc(db, `users/${user.uid}/fridgeItems/${id}`));
+      toast.success("Aliment supprimé avec succès");
+    } catch (error) {
+      toast.error("Erreur lors de la suppression");
+    }
   };
 
   const handleUpdate = async (id: string, updatedItem: Partial<FridgeItem>) => {
     if (!user) return;
-    await updateDoc(
-      doc(db, `users/${user.uid}/fridgeItems/${id}`),
-      updatedItem
-    );
+    try {
+      await updateDoc(
+        doc(db, `users/${user.uid}/fridgeItems/${id}`),
+        updatedItem
+      );
+      toast.success("Aliment mis à jour avec succès");
+    } catch (error) {
+      toast.error("Erreur lors de la mise à jour");
+    }
   };
 
   const getExpiryStatus = (expiryDate: string) => {
@@ -431,112 +347,173 @@ export default function MonFrigoPage() {
     return "ok";
   };
 
-  const filterItemsByExpiry = (items: FridgeItem[]) => {
-    let filtered = items;
+  const filterAndSortItems = () => {
+    let filtered = [...items];
 
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter((item) =>
+        item.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Expiry filter
     if (filterExpiry !== "all") {
       filtered = filtered.filter(
         (item) => getExpiryStatus(item.expiresAt) === filterExpiry
       );
     }
 
+    // Type filter
     if (filterType !== "all") {
       filtered = filtered.filter((item) => item.type === filterType);
     }
 
-    return filtered;
-  };
-
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const sortedAndFilteredItems = filterItemsByExpiry(
-    [...filteredItems].sort((a, b) => {
+    // Sort
+    return filtered.sort((a, b) => {
       if (sortBy === "name") {
         return a.name.localeCompare(b.name);
       } else if (sortBy === "type") {
         return a.type.localeCompare(b.type);
       } else {
-        const dateA = new Date(a.expiresAt);
-        const dateB = new Date(b.expiresAt);
-        return dateA.getTime() - dateB.getTime();
+        return (
+          new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime()
+        );
       }
-    })
-  );
+    });
+  };
 
   if (isLoading || !user) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
       </div>
     );
   }
 
+  const filteredItems = filterAndSortItems();
+
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
-      <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-8 text-white">
-        <h1 className="text-3xl font-bold mb-2">Mon Frigo 🧊</h1>
+    <div className="space-y-8">
+      <div className="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-6 md:p-8 text-white">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">Mon Frigo 🧊</h1>
         <p className="text-green-50">
           Gérez facilement vos aliments et évitez le gaspillage
         </p>
       </div>
 
-      <Tabs defaultValue="all" className="space-y-6">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="all" className="flex items-center gap-2">
-              <List className="w-4 h-4" />
-              Tous
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4" />
-              Expirés
-            </TabsTrigger>
-            <TabsTrigger value="soon" className="flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Bientôt
-            </TabsTrigger>
-            <TabsTrigger value="ok" className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4" />
-              Valides
-            </TabsTrigger>
-          </TabsList>
+      <Card>
+        <CardHeader>
+          <CardTitle>Ajouter un aliment</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleAdd} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <Input
+                placeholder="Nom de l'aliment"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <Input
+                placeholder="Quantité"
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+                required
+              />
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value)}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Type d'aliment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {foodTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                type="date"
+                value={expiresAt}
+                onChange={(e) => setExpiresAt(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="submit"
+                className="bg-gradient-to-r from-green-600 to-emerald-600"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Ajouter
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
-          <div className="flex items-center gap-4">
-            <Select
-              value={sortBy}
-              onValueChange={(value: "date" | "name" | "type") =>
-                setSortBy(value)
-              }
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Trier par" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Date d'expiration</SelectItem>
-                <SelectItem value="name">Nom</SelectItem>
-                <SelectItem value="type">Type</SelectItem>
-              </SelectContent>
-            </Select>
+      <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Rechercher un aliment..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-            <Select
-              value={filterType}
-              onValueChange={(value) => setFilterType(value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filtrer par type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tous les types</SelectItem>
-                {foodTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-wrap gap-2">
+          <Select
+            value={filterExpiry}
+            onValueChange={(value: any) => setFilterExpiry(value)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Filtrer par date" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous</SelectItem>
+              <SelectItem value="expired">Expirés</SelectItem>
+              <SelectItem value="soon">Bientôt expirés</SelectItem>
+              <SelectItem value="ok">Valides</SelectItem>
+            </SelectContent>
+          </Select>
 
+          <Select value={filterType} onValueChange={setFilterType}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Filtrer par type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tous les types</SelectItem>
+              {foodTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={sortBy}
+            onValueChange={(value: any) => setSortBy(value)}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Trier par" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="date">Date d'expiration</SelectItem>
+              <SelectItem value="name">Nom</SelectItem>
+              <SelectItem value="type">Type</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <div className="flex gap-1">
             <Button
               variant="outline"
               size="icon"
@@ -555,195 +532,40 @@ export default function MonFrigoPage() {
             </Button>
           </div>
         </div>
+      </div>
 
+      {filteredItems.length === 0 ? (
         <Card>
-          <CardHeader>
-            <CardTitle>Ajouter un aliment</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form
-              onSubmit={handleAdd}
-              className="grid grid-cols-1 sm:grid-cols-5 gap-4"
-            >
-              <Input
-                placeholder="Nom de l'aliment"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="transition-all duration-200 focus:ring-green-500 focus:border-green-500"
-              />
-              <Input
-                placeholder="Quantité"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                required
-                className="transition-all duration-200 focus:ring-green-500 focus:border-green-500"
-              />
-              <Select
-                value={type}
-                onValueChange={(value) => setType(value)}
-                required
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Type d'aliment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {foodTypes.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {type}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                type="date"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                required
-                className="transition-all duration-200 focus:ring-green-500 focus:border-green-500"
-              />
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter
-              </Button>
-            </form>
+          <CardContent className="py-8">
+            <div className="text-center">
+              <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <AlertCircle className="w-8 h-8 text-gray-400" />
+              </div>
+              <p className="text-gray-500 text-lg">Aucun aliment trouvé</p>
+              <p className="text-gray-400 text-sm mt-2">
+                Ajoutez des aliments pour commencer à gérer votre frigo
+              </p>
+            </div>
           </CardContent>
         </Card>
-
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-          <Input
-            type="text"
-            placeholder="Rechercher un aliment..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+      ) : (
+        <div
+          className={
+            viewMode === "grid"
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+              : "space-y-4"
+          }
+        >
+          {filteredItems.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              onDelete={handleDelete}
+              onUpdate={(updatedData) => handleUpdate(item.id, updatedData)}
+            />
+          ))}
         </div>
-
-        <TabsContent value="all">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedAndFilteredItems.map((item) => (
-                <ItemCard
-                  key={item.id}
-                  item={item}
-                  onDelete={handleDelete}
-                  onUpdate={(updatedData) => handleUpdate(item.id, updatedData)}
-                />
-              ))}
-            </div>
-          ) : (
-            <ItemList
-              items={sortedAndFilteredItems}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="expired">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedAndFilteredItems
-                .filter((item) => getExpiryStatus(item.expiresAt) === "expired")
-                .map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onDelete={handleDelete}
-                    onUpdate={(updatedData) =>
-                      handleUpdate(item.id, updatedData)
-                    }
-                  />
-                ))}
-            </div>
-          ) : (
-            <ItemList
-              items={sortedAndFilteredItems.filter(
-                (item) => getExpiryStatus(item.expiresAt) === "expired"
-              )}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="soon">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedAndFilteredItems
-                .filter((item) => getExpiryStatus(item.expiresAt) === "soon")
-                .map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onDelete={handleDelete}
-                    onUpdate={(updatedData) =>
-                      handleUpdate(item.id, updatedData)
-                    }
-                  />
-                ))}
-            </div>
-          ) : (
-            <ItemList
-              items={sortedAndFilteredItems.filter(
-                (item) => getExpiryStatus(item.expiresAt) === "soon"
-              )}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="ok">
-          {viewMode === "grid" ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {sortedAndFilteredItems
-                .filter((item) => getExpiryStatus(item.expiresAt) === "ok")
-                .map((item) => (
-                  <ItemCard
-                    key={item.id}
-                    item={item}
-                    onDelete={handleDelete}
-                    onUpdate={(updatedData) =>
-                      handleUpdate(item.id, updatedData)
-                    }
-                  />
-                ))}
-            </div>
-          ) : (
-            <ItemList
-              items={sortedAndFilteredItems.filter(
-                (item) => getExpiryStatus(item.expiresAt) === "ok"
-              )}
-              onDelete={handleDelete}
-              onUpdate={handleUpdate}
-            />
-          )}
-        </TabsContent>
-
-        {sortedAndFilteredItems.length === 0 && (
-          <Card>
-            <CardContent className="py-8">
-              <div className="text-center">
-                <div className="bg-gray-50 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-gray-400" />
-                </div>
-                <p className="text-gray-500 text-lg">
-                  Aucun aliment pour le moment
-                </p>
-                <p className="text-gray-400 text-sm">
-                  Ajoutez des aliments pour commencer à gérer votre frigo
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-      </Tabs>
+      )}
     </div>
   );
 }
