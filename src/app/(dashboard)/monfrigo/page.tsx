@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import useUser from "@/hooks/useUser";
 import { db } from "@/lib/firebase";
