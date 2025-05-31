@@ -11,6 +11,7 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  updateDoc,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -29,14 +30,321 @@ import {
   Clock,
   AlertTriangle,
   CheckCircle2,
+  Edit,
 } from "lucide-react";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface FridgeItem {
   id: string;
   name: string;
   quantity: string;
+  type: string;
   expiresAt: string;
   createdAt: any;
+}
+
+const foodTypes = [
+  "Fruits",
+  "Légumes",
+  "Produits laitiers",
+  "Viandes",
+  "Poissons",
+  "Céréales",
+  "Boissons",
+  "Sauces",
+  "Épices",
+  "Autres",
+];
+
+function EditItemForm({
+  item,
+  onSave,
+  onCancel,
+}: {
+  item: FridgeItem;
+  onSave: (updatedItem: Partial<FridgeItem>) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(item.name);
+  const [quantity, setQuantity] = useState(item.quantity);
+  const [type, setType] = useState(item.type);
+  const [expiresAt, setExpiresAt] = useState(item.expiresAt);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({
+      name,
+      quantity,
+      type,
+      expiresAt,
+    });
+  };
+
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle>Modifier l'aliment</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={handleSubmit}
+          className="grid grid-cols-1 sm:grid-cols-5 gap-4"
+        >
+          <Input
+            placeholder="Nom de l'aliment"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          <Input
+            placeholder="Quantité"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            required
+          />
+          <Select
+            value={type}
+            onValueChange={(value) => setType(value)}
+            required
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Type d'aliment" />
+            </SelectTrigger>
+            <SelectContent>
+              {foodTypes.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            type="date"
+            value={expiresAt}
+            onChange={(e) => setExpiresAt(e.target.value)}
+            required
+          />
+          <div className="flex gap-2">
+            <Button
+              type="submit"
+              className="flex-1 bg-green-600 hover:bg-green-700"
+            >
+              Enregistrer
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              onClick={onCancel}
+            >
+              Annuler
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ItemCard({
+  item,
+  onDelete,
+  onUpdate,
+}: {
+  item: FridgeItem;
+  onDelete: (id: string) => void;
+  onUpdate: (updatedItem: Partial<FridgeItem>) => void;
+}) {
+  const [isEditing, setIsEditing] = useState(false);
+  const expiryDate = new Date(item.expiresAt);
+  const today = new Date();
+  const daysUntilExpiry = Math.ceil(
+    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  let badgeColor = "default";
+  if (daysUntilExpiry <= 0) {
+    badgeColor = "destructive";
+  } else if (daysUntilExpiry <= 3) {
+    badgeColor = "secondary";
+  }
+
+  const handleSave = (updatedData: Partial<FridgeItem>) => {
+    onUpdate(updatedData);
+    setIsEditing(false);
+  };
+
+  return (
+    <>
+      <Card className="hover:shadow-md transition-shadow">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-green-100 text-green-600">
+                  {item.name?.substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  <Badge variant="outline" className="bg-blue-50 text-blue-600">
+                    {item.type}
+                  </Badge>
+                  <Badge variant="outline">Quantité : {item.quantity}</Badge>
+                  <Badge
+                    variant={
+                      badgeColor as "default" | "destructive" | "secondary"
+                    }
+                  >
+                    {daysUntilExpiry <= 0
+                      ? "Expiré"
+                      : `Expire dans ${daysUntilExpiry} jours`}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditing(true)}
+                className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+              >
+                <Edit className="h-5 w-5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onDelete(item.id)}
+                className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+      {isEditing && (
+        <EditItemForm
+          item={item}
+          onSave={handleSave}
+          onCancel={() => setIsEditing(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function ItemList({
+  items,
+  onDelete,
+  onUpdate,
+}: {
+  items: FridgeItem[];
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, updatedItem: Partial<FridgeItem>) => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  return (
+    <Card>
+      <CardContent className="p-4">
+        <div className="space-y-4">
+          {items.map((item) => {
+            const expiryDate = new Date(item.expiresAt);
+            const today = new Date();
+            const daysUntilExpiry = Math.ceil(
+              (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            let badgeColor = "default";
+            if (daysUntilExpiry <= 0) {
+              badgeColor = "destructive";
+            } else if (daysUntilExpiry <= 3) {
+              badgeColor = "secondary";
+            }
+
+            return (
+              <div key={item.id}>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white border hover:border-green-200 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <Avatar className="h-10 w-10">
+                      <AvatarFallback className="bg-green-100 text-green-600">
+                        {item.name?.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">
+                        {item.name}
+                      </h3>
+                      <div className="flex flex-wrap gap-2 mt-1">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-600"
+                        >
+                          {item.type}
+                        </Badge>
+                        <Badge variant="outline">
+                          Quantité : {item.quantity}
+                        </Badge>
+                        <Badge
+                          variant={
+                            badgeColor as
+                              | "default"
+                              | "destructive"
+                              | "secondary"
+                          }
+                        >
+                          {daysUntilExpiry <= 0
+                            ? "Expiré"
+                            : `Expire dans ${daysUntilExpiry} jours`}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setEditingId(item.id)}
+                      className="text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                    >
+                      <Edit className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => onDelete(item.id)}
+                      className="text-gray-400 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+                {editingId === item.id && (
+                  <EditItemForm
+                    item={item}
+                    onSave={(updatedData) => {
+                      onUpdate(item.id, updatedData);
+                      setEditingId(null);
+                    }}
+                    onCancel={() => setEditingId(null)}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function MonFrigoPage() {
@@ -47,12 +355,15 @@ export default function MonFrigoPage() {
   const [items, setItems] = useState<FridgeItem[]>([]);
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [type, setType] = useState("");
   const [expiresAt, setExpiresAt] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [filterExpiry, setFilterExpiry] = useState<
     "all" | "expired" | "soon" | "ok"
   >("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "name" | "type">("date");
 
   useEffect(() => {
     if (user === null) {
@@ -77,33 +388,21 @@ export default function MonFrigoPage() {
     return () => unsubscribe();
   }, [user]);
 
-  if (isLoading || !user) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
-      </div>
-    );
-  }
-
-  // ... (le reste de votre code reste exactement le même)
-
-  if (!user) {
-    return null; // Retourne null pendant la redirection
-  }
-
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !name || !quantity || !expiresAt) return;
+    if (!user || !name || !quantity || !type || !expiresAt) return;
 
     await addDoc(collection(db, `users/${user.uid}/fridgeItems`), {
       name,
       quantity,
+      type,
       expiresAt,
       createdAt: serverTimestamp(),
     });
 
     setName("");
     setQuantity("");
+    setType("");
     setExpiresAt("");
   };
 
@@ -112,9 +411,13 @@ export default function MonFrigoPage() {
     await deleteDoc(doc(db, `users/${user.uid}/fridgeItems/${id}`));
   };
 
-  const filteredItems = items.filter((item) =>
-    item.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleUpdate = async (id: string, updatedItem: Partial<FridgeItem>) => {
+    if (!user) return;
+    await updateDoc(
+      doc(db, `users/${user.uid}/fridgeItems/${id}`),
+      updatedItem
+    );
+  };
 
   const getExpiryStatus = (expiryDate: string) => {
     const today = new Date();
@@ -129,19 +432,46 @@ export default function MonFrigoPage() {
   };
 
   const filterItemsByExpiry = (items: FridgeItem[]) => {
-    if (filterExpiry === "all") return items;
-    return items.filter(
-      (item) => getExpiryStatus(item.expiresAt) === filterExpiry
-    );
+    let filtered = items;
+
+    if (filterExpiry !== "all") {
+      filtered = filtered.filter(
+        (item) => getExpiryStatus(item.expiresAt) === filterExpiry
+      );
+    }
+
+    if (filterType !== "all") {
+      filtered = filtered.filter((item) => item.type === filterType);
+    }
+
+    return filtered;
   };
+
+  const filteredItems = items.filter((item) =>
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const sortedAndFilteredItems = filterItemsByExpiry(
     [...filteredItems].sort((a, b) => {
-      const dateA = new Date(a.expiresAt);
-      const dateB = new Date(b.expiresAt);
-      return dateA.getTime() - dateB.getTime();
+      if (sortBy === "name") {
+        return a.name.localeCompare(b.name);
+      } else if (sortBy === "type") {
+        return a.type.localeCompare(b.type);
+      } else {
+        const dateA = new Date(a.expiresAt);
+        const dateB = new Date(b.expiresAt);
+        return dateA.getTime() - dateB.getTime();
+      }
     })
   );
+
+  if (isLoading || !user) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -173,7 +503,40 @@ export default function MonFrigoPage() {
             </TabsTrigger>
           </TabsList>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <Select
+              value={sortBy}
+              onValueChange={(value: "date" | "name" | "type") =>
+                setSortBy(value)
+              }
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Trier par" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date d'expiration</SelectItem>
+                <SelectItem value="name">Nom</SelectItem>
+                <SelectItem value="type">Type</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filterType}
+              onValueChange={(value) => setFilterType(value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Filtrer par type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tous les types</SelectItem>
+                {foodTypes.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Button
               variant="outline"
               size="icon"
@@ -200,7 +563,7 @@ export default function MonFrigoPage() {
           <CardContent>
             <form
               onSubmit={handleAdd}
-              className="grid grid-cols-1 sm:grid-cols-4 gap-4"
+              className="grid grid-cols-1 sm:grid-cols-5 gap-4"
             >
               <Input
                 placeholder="Nom de l'aliment"
@@ -216,6 +579,22 @@ export default function MonFrigoPage() {
                 required
                 className="transition-all duration-200 focus:ring-green-500 focus:border-green-500"
               />
+              <Select
+                value={type}
+                onValueChange={(value) => setType(value)}
+                required
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Type d'aliment" />
+                </SelectTrigger>
+                <SelectContent>
+                  {foodTypes.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Input
                 type="date"
                 value={expiresAt}
@@ -249,11 +628,20 @@ export default function MonFrigoPage() {
           {viewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {sortedAndFilteredItems.map((item) => (
-                <ItemCard key={item.id} item={item} onDelete={handleDelete} />
+                <ItemCard
+                  key={item.id}
+                  item={item}
+                  onDelete={handleDelete}
+                  onUpdate={(updatedData) => handleUpdate(item.id, updatedData)}
+                />
               ))}
             </div>
           ) : (
-            <ItemList items={sortedAndFilteredItems} onDelete={handleDelete} />
+            <ItemList
+              items={sortedAndFilteredItems}
+              onDelete={handleDelete}
+              onUpdate={handleUpdate}
+            />
           )}
         </TabsContent>
 
@@ -263,7 +651,14 @@ export default function MonFrigoPage() {
               {sortedAndFilteredItems
                 .filter((item) => getExpiryStatus(item.expiresAt) === "expired")
                 .map((item) => (
-                  <ItemCard key={item.id} item={item} onDelete={handleDelete} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onDelete={handleDelete}
+                    onUpdate={(updatedData) =>
+                      handleUpdate(item.id, updatedData)
+                    }
+                  />
                 ))}
             </div>
           ) : (
@@ -272,6 +667,7 @@ export default function MonFrigoPage() {
                 (item) => getExpiryStatus(item.expiresAt) === "expired"
               )}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           )}
         </TabsContent>
@@ -282,7 +678,14 @@ export default function MonFrigoPage() {
               {sortedAndFilteredItems
                 .filter((item) => getExpiryStatus(item.expiresAt) === "soon")
                 .map((item) => (
-                  <ItemCard key={item.id} item={item} onDelete={handleDelete} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onDelete={handleDelete}
+                    onUpdate={(updatedData) =>
+                      handleUpdate(item.id, updatedData)
+                    }
+                  />
                 ))}
             </div>
           ) : (
@@ -291,6 +694,7 @@ export default function MonFrigoPage() {
                 (item) => getExpiryStatus(item.expiresAt) === "soon"
               )}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           )}
         </TabsContent>
@@ -301,7 +705,14 @@ export default function MonFrigoPage() {
               {sortedAndFilteredItems
                 .filter((item) => getExpiryStatus(item.expiresAt) === "ok")
                 .map((item) => (
-                  <ItemCard key={item.id} item={item} onDelete={handleDelete} />
+                  <ItemCard
+                    key={item.id}
+                    item={item}
+                    onDelete={handleDelete}
+                    onUpdate={(updatedData) =>
+                      handleUpdate(item.id, updatedData)
+                    }
+                  />
                 ))}
             </div>
           ) : (
@@ -310,6 +721,7 @@ export default function MonFrigoPage() {
                 (item) => getExpiryStatus(item.expiresAt) === "ok"
               )}
               onDelete={handleDelete}
+              onUpdate={handleUpdate}
             />
           )}
         </TabsContent>
@@ -333,136 +745,5 @@ export default function MonFrigoPage() {
         )}
       </Tabs>
     </div>
-  );
-}
-
-function ItemCard({
-  item,
-  onDelete,
-}: {
-  item: FridgeItem;
-  onDelete: (id: string) => void;
-}) {
-  const expiryDate = new Date(item.expiresAt);
-  const today = new Date();
-  const daysUntilExpiry = Math.ceil(
-    (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-  );
-
-  let badgeColor = "default";
-  if (daysUntilExpiry <= 0) {
-    badgeColor = "destructive";
-  } else if (daysUntilExpiry <= 3) {
-    badgeColor = "secondary";
-  }
-
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-green-100 text-green-600">
-                {item.name?.substring(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-semibold text-gray-900">{item.name}</h3>
-              <div className="flex gap-2 mt-1">
-                <Badge variant="outline">Quantité : {item.quantity}</Badge>
-                <Badge
-                  variant={
-                    badgeColor as "default" | "destructive" | "secondary"
-                  }
-                >
-                  {daysUntilExpiry <= 0
-                    ? "Expiré"
-                    : `Expire dans ${daysUntilExpiry} jours`}
-                </Badge>
-              </div>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onDelete(item.id)}
-            className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-5 w-5" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ItemList({
-  items,
-  onDelete,
-}: {
-  items: FridgeItem[];
-  onDelete: (id: string) => void;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="space-y-4">
-          {items.map((item) => {
-            const expiryDate = new Date(item.expiresAt);
-            const today = new Date();
-            const daysUntilExpiry = Math.ceil(
-              (expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-            );
-
-            let badgeColor = "default";
-            if (daysUntilExpiry <= 0) {
-              badgeColor = "destructive";
-            } else if (daysUntilExpiry <= 3) {
-              badgeColor = "secondary";
-            }
-
-            return (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-4 rounded-xl bg-white border hover:border-green-200 transition-colors"
-              >
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-10 w-10">
-                    <AvatarFallback className="bg-green-100 text-green-600">
-                      {item.name?.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold text-gray-900">{item.name}</h3>
-                    <div className="flex gap-2 mt-1">
-                      <Badge variant="outline">
-                        Quantité : {item.quantity}
-                      </Badge>
-                      <Badge
-                        variant={
-                          badgeColor as "default" | "destructive" | "secondary"
-                        }
-                      >
-                        {daysUntilExpiry <= 0
-                          ? "Expiré"
-                          : `Expire dans ${daysUntilExpiry} jours`}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => onDelete(item.id)}
-                  className="text-gray-400 hover:text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
   );
 }
