@@ -265,6 +265,7 @@ export default function MonFrigoPage() {
   >("all");
   const [filterType, setFilterType] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"date" | "name" | "type">("date");
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     if (user === null) {
@@ -350,26 +351,22 @@ export default function MonFrigoPage() {
   const filterAndSortItems = () => {
     let filtered = [...items];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter((item) =>
         item.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Expiry filter
     if (filterExpiry !== "all") {
       filtered = filtered.filter(
         (item) => getExpiryStatus(item.expiresAt) === filterExpiry
       );
     }
 
-    // Type filter
     if (filterType !== "all") {
       filtered = filtered.filter((item) => item.type === filterType);
     }
 
-    // Sort
     return filtered.sort((a, b) => {
       if (sortBy === "name") {
         return a.name.localeCompare(b.name);
@@ -534,7 +531,48 @@ export default function MonFrigoPage() {
         </div>
       </div>
 
-      {filteredItems.length === 0 ? (
+      <div className="fridge h-[600px] w-full relative">
+        <div className={`fridge-door ${isOpen ? 'animate-door-open' : 'animate-door-close'}`}>
+          <div className="fridge-handle"></div>
+          <Button
+            onClick={() => setIsOpen(!isOpen)}
+            className="absolute left-1/2 top-4 -translate-x-1/2 bg-white text-gray-600"
+          >
+            {isOpen ? 'Fermer' : 'Ouvrir'}
+          </Button>
+        </div>
+
+        <div className="p-8 h-full relative">
+          <div className="fridge-shelf" style={{ top: '25%' }}></div>
+          <div className="fridge-shelf" style={{ top: '50%' }}></div>
+          <div className="fridge-shelf" style={{ top: '75%' }}></div>
+
+          {filteredItems.map((item, index) => {
+            const row = Math.floor(index / 3);
+            const col = index % 3;
+            const top = `${25 * row + 10}%`;
+            const left = `${33 * col + 10}%`;
+
+            return (
+              <div
+                key={item.id}
+                className="fridge-item animate-fade-in"
+                style={{
+                  top,
+                  left,
+                  backgroundColor: getItemColor(item.type),
+                }}
+                onClick={() => handleUpdate(item.id, item)}
+              >
+                <p className="font-medium text-white">{item.name}</p>
+                <p className="text-sm text-white/80">{item.quantity}</p>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {filteredItems.length === 0 && (
         <Card>
           <CardContent className="py-8">
             <div className="text-center">
@@ -548,24 +586,23 @@ export default function MonFrigoPage() {
             </div>
           </CardContent>
         </Card>
-      ) : (
-        <div
-          className={
-            viewMode === "grid"
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-              : "space-y-4"
-          }
-        >
-          {filteredItems.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              onDelete={handleDelete}
-              onUpdate={(updatedData) => handleUpdate(item.id, updatedData)}
-            />
-          ))}
-        </div>
       )}
     </div>
   );
+}
+
+function getItemColor(type: string): string {
+  const colors: { [key: string]: string } = {
+    "Fruits": "#4ade80",
+    "Légumes": "#22c55e",
+    "Produits laitiers": "#60a5fa",
+    "Viandes": "#ef4444",
+    "Poissons": "#3b82f6",
+    "Céréales": "#f59e0b",
+    "Boissons": "#06b6d4",
+    "Sauces": "#f97316",
+    "Épices": "#d946ef",
+    "Autres": "#6366f1"
+  };
+  return colors[type] || colors["Autres"];
 }
