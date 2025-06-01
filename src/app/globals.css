@@ -121,7 +121,7 @@
   }
 }
 
-/* Modern Animations */
+/* Animations */
 @keyframes float {
   0% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
@@ -130,6 +130,70 @@
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+@keyframes spin-slow {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+@keyframes door-open {
+  from {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+  to {
+    transform: perspective(1000px) rotateY(-105deg);
+  }
+}
+
+.animate-door-open {
+  animation: door-open 0.5s ease-out forwards;
+  transform-origin: left;
+}
+
+@keyframes door-close {
+  from {
+    transform: perspective(1000px) rotateY(-105deg);
+  }
+  to {
+    transform: perspective(1000px) rotateY(0deg);
+  }
+}
+
+.animate-door-close {
+  animation: door-close 0.5s ease-out forwards;
+  transform-origin: left;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out forwards;
 }
 
 /* Glass Effect */
@@ -163,4 +227,49 @@
 /* Gradient Text */
 .gradient-text {
   @apply bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent;
+}
+
+/* Fridge Styles */
+.fridge {
+  @apply bg-white rounded-3xl shadow-2xl relative overflow-hidden;
+  perspective: 1000px;
+}
+
+.fridge-door {
+  @apply absolute inset-0 bg-gray-100 rounded-3xl border-2 border-gray-200;
+  transform-origin: left;
+  backface-visibility: hidden;
+}
+
+.fridge-handle {
+  @apply absolute right-6 top-1/2 -translate-y-1/2 w-3 h-24 bg-gray-300 rounded-full;
+}
+
+.fridge-shelf {
+  @apply w-full h-px bg-gray-200 absolute left-0;
+}
+
+.fridge-item {
+  @apply absolute p-2 rounded-lg shadow-sm transition-all duration-300 cursor-pointer hover:scale-105;
+}
+
+/* Recipe Card Styles */
+.recipe-card {
+  @apply relative overflow-hidden rounded-2xl transition-all duration-300 hover:shadow-lg;
+}
+
+.recipe-card-overlay {
+  @apply absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity duration-300;
+}
+
+.recipe-card:hover .recipe-card-overlay {
+  @apply opacity-100;
+}
+
+.recipe-card-content {
+  @apply absolute bottom-0 left-0 right-0 p-6 text-white transform translate-y-full transition-transform duration-300;
+}
+
+.recipe-card:hover .recipe-card-content {
+  @apply translate-y-0;
 }
