@@ -7,7 +7,6 @@ import useUser from "@/hooks/useUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  RefreshCw,
   ChefHat,
   Clock,
   UtensilsCrossed,
@@ -35,11 +34,11 @@ interface Ingredient {
 
 interface Recipe {
   id?: string;
-  title?: string;
+  title: string;
   description?: string;
-  mealType?: string;
-  ingredients?: Ingredient[];
-  steps?: string[];
+  mealType: string;
+  ingredients: Ingredient[];
+  steps: string[];
   saved?: boolean;
 }
 
@@ -53,34 +52,43 @@ export default function RecipesPage() {
   const [showMealTypeSelector, setShowMealTypeSelector] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("generate");
+  const [apiError, setApiError] = useState<string | null>(null);
 
+  // Charger les données utilisateur
   useEffect(() => {
     if (!user) return;
 
-    const fetchData = async () => {
+    const fetchUserData = async () => {
       try {
+        // Charger les ingrédients du frigo
         const fridgeRef = collection(db, `users/${user.uid}/fridgeItems`);
         const fridgeSnapshot = await getDocs(fridgeRef);
         const items = fridgeSnapshot.docs.map((doc) => doc.data().name);
         setIngredients(items);
 
+        // Charger les recettes sauvegardées
         const savedRef = collection(db, `users/${user.uid}/savedRecipes`);
         const savedSnapshot = await getDocs(savedRef);
         const saved = savedSnapshot.docs.map((doc) => ({
           id: doc.id,
           title: doc.data().title || "Sans titre",
-          ...doc.data(),
+          description: doc.data().description,
+          mealType: doc.data().mealType || "dîner",
+          ingredients: doc.data().ingredients || [],
+          steps: doc.data().steps || [],
           saved: true,
-        })) as Recipe[];
+        }));
         setSavedRecipes(saved);
       } catch (error) {
+        console.error("Erreur Firebase:", error);
         toast.error("Erreur lors du chargement des données");
       }
     };
 
-    fetchData();
+    fetchUserData();
   }, [user]);
 
+  // Générer une nouvelle recette
   const handleGenerateRecipe = async () => {
     if (ingredients.length === 0) {
       toast.error("Ajoutez d'abord des ingrédients dans votre frigo !");
@@ -93,80 +101,109 @@ export default function RecipesPage() {
     }
 
     setLoading(true);
+    setApiError(null);
+
     try {
-      const res = await fetch("/api/recipes", {
+      const response = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: ingredients, mealType }),
+        body: JSON.stringify({
+          items: ingredients,
+          mealType,
+        }),
       });
 
-      if (!res.ok) {
-        throw new Error("Erreur lors de la génération de la recette");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erreur lors de la génération");
       }
 
-      const data = await res.json();
+      const data = await response.json();
+
+      if (!data.title || !data.ingredients || !data.steps) {
+        throw new Error("Réponse de l'API incomplète");
+      }
+
       setRecipe({
-        title: data.title || "Nouvelle recette",
+        title: data.title,
         description: data.description || "",
         mealType: data.mealType || mealType,
-        ingredients: data.ingredients || [],
-        steps: data.steps || [],
+        ingredients: data.ingredients,
+        steps: data.steps,
+        saved: false,
       });
+
       setShowMealTypeSelector(false);
       setActiveTab("current");
-      toast.success("Nouvelle recette générée !");
+      toast.success("Recette générée avec succès !");
     } catch (error) {
-      toast.error("Erreur lors de la génération de la recette");
+      console.error("Erreur génération recette:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Une erreur est survenue";
+      setApiError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
+  // Sauvegarder une recette
   const handleSaveRecipe = async () => {
     if (!user || !recipe) return;
 
     try {
       const recipeToSave = {
-        ...recipe,
-        saved: true,
-        title: recipe.title || "Nouvelle recette",
+        title: recipe.title,
         description: recipe.description || "",
-        mealType: recipe.mealType || "dîner",
+        mealType: recipe.mealType,
+        ingredients: recipe.ingredients,
+        steps: recipe.steps,
       };
+
       const docRef = await addDoc(
         collection(db, `users/${user.uid}/savedRecipes`),
         recipeToSave
       );
-      setSavedRecipes([...savedRecipes, { ...recipeToSave, id: docRef.id }]);
+
+      setSavedRecipes([
+        ...savedRecipes,
+        { ...recipeToSave, id: docRef.id, saved: true },
+      ]);
       setRecipe({ ...recipe, saved: true });
       toast.success("Recette sauvegardée !");
     } catch (error) {
+      console.error("Erreur sauvegarde:", error);
       toast.error("Erreur lors de la sauvegarde");
     }
   };
 
+  // Supprimer une recette sauvegardée
   const handleRemoveSavedRecipe = async (recipeId: string) => {
-    if (!user) return;
+    if (!user || !recipeId) return;
 
     try {
       await setDoc(doc(db, `users/${user.uid}/savedRecipes`, recipeId), {
         saved: false,
       });
+
       setSavedRecipes(savedRecipes.filter((r) => r.id !== recipeId));
       if (recipe?.id === recipeId) {
         setRecipe({ ...recipe, saved: false });
       }
       toast.success("Recette retirée des favoris");
     } catch (error) {
+      console.error("Erreur suppression:", error);
       toast.error("Erreur lors de la suppression");
     }
   };
 
+  // Charger une recette sauvegardée
   const loadSavedRecipe = (savedRecipe: Recipe) => {
     setRecipe(savedRecipe);
     setActiveTab("current");
   };
 
+  // Filtrer les recettes sauvegardées
   const filteredSavedRecipes = savedRecipes.filter((recipe) => {
     const title = recipe.title || "";
     return title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -176,6 +213,7 @@ export default function RecipesPage() {
 
   return (
     <div className="space-y-8">
+      {/* En-tête */}
       <div className="bg-gradient-to-br from-blue-500 to-indigo-500 rounded-2xl p-6 md:p-8 text-white">
         <h1 className="text-2xl md:text-3xl font-bold mb-2">
           Recettes Personnalisées 👨‍🍳
@@ -185,26 +223,35 @@ export default function RecipesPage() {
         </p>
       </div>
 
+      {/* Message d'erreur API */}
+      {apiError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+          Erreur : {apiError}
+        </div>
+      )}
+
+      {/* Onglets */}
       <Tabs
         value={activeTab}
         onValueChange={setActiveTab}
         className="space-y-6"
       >
         <TabsList className="grid w-full grid-cols-1 md:grid-cols-3">
-          <TabsTrigger value="generate" className="flex items-center gap-2">
-            <ChefHat className="h-4 w-4" />
+          <TabsTrigger value="generate">
+            <ChefHat className="h-4 w-4 mr-2" />
             Générer
           </TabsTrigger>
-          <TabsTrigger value="current" className="flex items-center gap-2">
-            <Clock className="h-4 w-4" />
+          <TabsTrigger value="current">
+            <Clock className="h-4 w-4 mr-2" />
             Recette actuelle
           </TabsTrigger>
-          <TabsTrigger value="saved" className="flex items-center gap-2">
-            <Heart className="h-4 w-4" />
+          <TabsTrigger value="saved">
+            <Heart className="h-4 w-4 mr-2" />
             Sauvegardées
           </TabsTrigger>
         </TabsList>
 
+        {/* Onglet Génération */}
         <TabsContent value="generate">
           <Card>
             <CardHeader>
@@ -241,14 +288,12 @@ export default function RecipesPage() {
                       </div>
                     ))}
                   </div>
+
                   {showMealTypeSelector ? (
                     <div className="space-y-4">
-                      <Select
-                        value={mealType}
-                        onValueChange={(value: string) => setMealType(value)}
-                      >
+                      <Select value={mealType} onValueChange={setMealType}>
                         <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez un type de repas" />
+                          <SelectValue placeholder="Type de repas" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="petit-déjeuner">
@@ -258,7 +303,6 @@ export default function RecipesPage() {
                           <SelectItem value="dîner">Dîner</SelectItem>
                           <SelectItem value="goûter">Goûter</SelectItem>
                           <SelectItem value="dessert">Dessert</SelectItem>
-                          <SelectItem value="encas">En-cas</SelectItem>
                         </SelectContent>
                       </Select>
                       <Button
@@ -272,7 +316,7 @@ export default function RecipesPage() {
                             Génération en cours...
                           </>
                         ) : (
-                          "Confirmer et générer"
+                          "Générer la recette"
                         )}
                       </Button>
                     </div>
@@ -281,7 +325,7 @@ export default function RecipesPage() {
                       onClick={handleGenerateRecipe}
                       className="w-full bg-gradient-to-r from-blue-600 to-indigo-600"
                     >
-                      Générer une recette
+                      Commencer
                     </Button>
                   )}
                 </>
@@ -290,30 +334,31 @@ export default function RecipesPage() {
           </Card>
         </TabsContent>
 
+        {/* Onglet Recette Actuelle */}
         <TabsContent value="current">
           {recipe ? (
-            <Card className="border-green-200">
+            <Card className="border-green-100">
               <CardHeader className="flex flex-row justify-between items-center">
                 <div>
                   <CardTitle className="flex items-center gap-2">
                     <ChefHat className="h-5 w-5 text-green-500" />
-                    {recipe.title || "Nouvelle recette"}
+                    {recipe.title}
                   </CardTitle>
                   <p className="text-sm text-gray-500 mt-1">
-                    Pour: {recipe.mealType || "Non spécifié"}
+                    Pour : {recipe.mealType}
                   </p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={
-                    recipe.saved
+                    recipe.saved && recipe.id
                       ? () => recipe.id && handleRemoveSavedRecipe(recipe.id)
                       : handleSaveRecipe
                   }
                   className={
                     recipe.saved
-                      ? "text-red-500"
+                      ? "text-red-500 hover:text-red-600"
                       : "text-gray-400 hover:text-red-500"
                   }
                 >
@@ -328,10 +373,11 @@ export default function RecipesPage() {
                 {recipe.description && (
                   <p className="text-gray-700">{recipe.description}</p>
                 )}
+
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Ingrédients</h3>
                   <ul className="space-y-2">
-                    {(recipe.ingredients || []).map((ingredient, index) => (
+                    {recipe.ingredients.map((ingredient, index) => (
                       <li key={index} className="flex gap-2">
                         <span className="font-medium">
                           {ingredient.quantity}:
@@ -345,7 +391,7 @@ export default function RecipesPage() {
                 <div>
                   <h3 className="text-lg font-semibold mb-3">Préparation</h3>
                   <ol className="space-y-3 list-decimal list-inside">
-                    {(recipe.steps || []).map((step, index) => (
+                    {recipe.steps.map((step, index) => (
                       <li key={index} className="text-gray-700">
                         {step}
                       </li>
@@ -368,6 +414,7 @@ export default function RecipesPage() {
           )}
         </TabsContent>
 
+        {/* Onglet Recettes Sauvegardées */}
         <TabsContent value="saved">
           <Card>
             <CardHeader>
@@ -387,9 +434,6 @@ export default function RecipesPage() {
                       className="pl-9"
                     />
                   </div>
-                  <Button variant="outline" size="icon">
-                    <Filter className="h-4 w-4" />
-                  </Button>
                 </div>
               </CardTitle>
             </CardHeader>
@@ -413,10 +457,10 @@ export default function RecipesPage() {
                       <CardHeader className="flex flex-row justify-between items-center p-4">
                         <div>
                           <CardTitle className="text-lg">
-                            {savedRecipe.title || "Sans titre"}
+                            {savedRecipe.title}
                           </CardTitle>
                           <p className="text-sm text-gray-500">
-                            {savedRecipe.mealType || "Non spécifié"}
+                            {savedRecipe.mealType}
                           </p>
                         </div>
                         <Button
@@ -427,7 +471,7 @@ export default function RecipesPage() {
                             savedRecipe.id &&
                               handleRemoveSavedRecipe(savedRecipe.id);
                           }}
-                          className="text-red-500"
+                          className="text-red-500 hover:text-red-600"
                         >
                           <HeartOff className="h-4 w-4" />
                         </Button>
