@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.MISTRAL_API_KEY}`,
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_FIREBASE_MISTRAL_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
